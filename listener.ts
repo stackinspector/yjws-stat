@@ -2,7 +2,7 @@ import { writelnSync } from 'baseutil/writeln.ts'
 import type { Dict, Ports, Output } from 'baseutil/fetchlot.ts'
 import { worker } from 'baseutil/fetchlot.ts'
 
-const ID = 16378017
+const ID = Number(Deno.args[0])
 
 const ports: Ports<number> = new Map([
     ['info', {
@@ -40,7 +40,7 @@ const ports: Ports<number> = new Map([
 ])
 
 const output: Output = (type, message) => {
-    writelnSync(JSON.stringify(message), './' + type)
+    writelnSync(JSON.stringify(message), `./${ID}_${type}`)
     console.log(type.toUpperCase(), message)
 }
 
