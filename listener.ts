@@ -1,6 +1,28 @@
+// deno-lint-ignore-file camelcase
+
 import { writelnSync } from 'baseutil/writeln.ts'
-import type { Dict, Ports, Output } from 'baseutil/fetchlot.ts'
+import type { Ports, Output } from 'baseutil/fetchlot.ts'
 import { worker } from 'baseutil/fetchlot.ts'
+
+interface Info {
+    tag_id: number
+    count: {
+        use: number
+        atten: number
+    }
+}
+
+interface Extd {
+    topic_id: number
+    view_count: number
+    discuss_count: number
+    active_users: {
+        user_info: {
+            uid: number
+        }
+        score: number
+    }[]
+}
 
 const ID = Number(Deno.args[0])
 
@@ -9,13 +31,13 @@ const ports: Ports<number> = new Map([
         url: () => `https://api.bilibili.com/x/tag/info?tag_id=${ID}`,
         valid: [
             (resp) => resp.code as number === 0,
-            (resp) => (resp.data as Dict).tag_id as number === ID,
+            (resp) => (resp.data as Info).tag_id === ID,
         ],
         proc: (resp) => {
-            const count = (resp.data as Dict).count as Dict
+            const count = (resp.data as Info).count
             return {
-                use: count.use as number,
-                follow: count.atten as number,
+                use: count.use,
+                follow: count.atten,
             }
         },
     }],
@@ -23,16 +45,16 @@ const ports: Ports<number> = new Map([
         url: () => `https://api.vc.bilibili.com/topic_svr/v1/topic_svr/get_active_users?topic_id=${ID}`,
         valid: [
             (resp) => resp.code as number === 0,
-            (resp) => (resp.data as Dict).topic_id as number === ID,
+            (resp) => (resp.data as Extd).topic_id === ID,
         ],
         proc: (resp, input) => {
-            const data = resp.data as Dict
+            const data = resp.data as Extd
             return {
-                view: data.view_count as number,
-                discuss: data.discuss_count as number,
-                active: new Date(input).getMinutes() % 10 === 0 ? (data.active_users as Dict[]).map((s) => ({
-                    uid: (s.user_info as Dict).uid as number,
-                    score: s.score as number,
+                view: data.view_count,
+                discuss: data.discuss_count,
+                active: new Date(input).getMinutes() % 10 === 0 ? data.active_users.map((s) => ({
+                    uid: s.user_info.uid,
+                    score: s.score,
                 })) : void 0,
             }
         },
